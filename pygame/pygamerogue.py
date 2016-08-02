@@ -385,7 +385,17 @@ class Goblin(Monster):
         # -- give something into inventory
         # self.inventory["goblin amulet"] = 1
 
-
+class Elfe(Monster):
+    def __init__ (self, x, y, xp=0, level=1, hp=0, picture=""):
+        Monster.__init__(self, x, y, xp, level, hp, picture)
+        self.picture = PygView.ELFE
+        self.streng = 7
+        self.hitpoints = 20
+        #self.picture = PygView.ELFE
+        
+        
+        
+        
 class Wolf(Monster):
     def __init__(self, x, y, xp=0, level=1, hp=0, picture=""):
         """another weak monster"""
@@ -651,7 +661,8 @@ class Level(object):
         "S": "Statue",
         "L": "loot",
         "a": "Apple",
-        "k": "key"
+        "k": "key",
+        "E": "Elfe"
     }
 
     @staticmethod
@@ -757,7 +768,10 @@ class Level(object):
                 # if not overwritten later by a Wall() object etc., each tile is a Floor()
                 self.layout[(x, y)] = Floor()
                 if char == "M":
-                    self.monsters.append(random.choice([Goblin(x, y), Wolf(x, y)]))  # insert your own Monsters here
+                    self.monsters.append(random.choice([Goblin(x, y),
+                                                        Wolf(x, y),
+													    Elfe(x, y)]		
+													    ))  # insert your own Monsters here
                 elif char == "B":
                     # insert your own boss monsters here
                     self.monsters.append(random.choice([EliteWarrior(x, y), Golem(x, y)]))
@@ -917,10 +931,13 @@ class PygView(object):
         PygView.LOOT = PygView.MAIN.image_at((155, 672, 32, 32), (0, 0, 0))
         PygView.KEY = PygView.FIGUREN.image_at((54, 1682, 32, 32), (0, 0, 0))
         PygView.SIGN = PygView.GUI.image_at((197, 0, 32, 32), (0, 0, 0))
+        PygView.ELFE = pygame.image.load(os.path.join("images", "elfe.png")) 
         # ------- portraits -----
         PygView.TRADER = pygame.image.load(os.path.join("images", "hakim.png"))
         PygView.DRUID = pygame.image.load(os.path.join("images", "druid.png"))
         PygView.GAMEOVER = pygame.image.load(os.path.join("images", "gameover.jpg"))
+        PygView.GAMEOVEREAT = pygame.image.load(os.path.join("images", "gameover.png"))
+        
         # --------- create player instance --------------
         self.player = Player(x, y, xp, level, hp)
         # ---- ask player to enter his name --------
@@ -1149,6 +1166,45 @@ class PygView(object):
                     elif event.key == pygame.K_QUESTION or event.key == pygame.K_h:
                         display_textlines(self.hilftextlines, self.screen)
                         continue
+                        
+                    elif event.key == pygame.K_6:
+                        while True:
+                            antwort = input("Input: ")
+                            if antwort.lower() == "health":
+                                self.player.hitpoints = 100
+                                print("Healthed")
+                                Flytext(self.player.x, self.player.y, "Healthed")
+                            elif antwort.lower() == "feed":
+                                self.player.hunger = 0
+                                print("Feeded")
+                                Flytext(self.player.x, self.player.y, "Feeded")
+                            elif antwort.lower() == "xp":
+                                self.player.xp += 100
+                                print("Players XP: " + str(self.player.xp))
+                                self.player.check_levelup()
+                            elif antwort.lower() == "nodmg":
+                                self.player.damaged = False
+                                print("Players Damaged: " + str(self.player.damaged))
+                            elif antwort.lower() == "buffs":
+                                self.player.dexterity += 100
+                                print("Players Dexterity " + str(self.player.dexterity))
+                                self.player.intelligence += 100
+                                print("Players Intelligence " + str(self.player.intelligence))
+                            elif antwort.lower() == "addkill":
+                                self.player.kills += 1
+                                print("Players Kills: " + str(self.player.kills))
+                            elif antwort.lower() == "mana":
+                                self.player.mana += 100
+                                print("Players Mana: " + str(self.player.mana))
+                            elif antwort.lower() == "strength":
+                                self.player.strength += 100
+                                print("Players Strenght " + str(self.player.strength))
+                            elif antwort.lower() == "exit":
+                                print("Exiting Cheat Menu")
+                                break
+                            else:
+                                print("Cant find command")
+                    
                     elif event.key == pygame.K_PERIOD or event.key == pygame.K_RETURN:
                         pass      # player is idle for one turn
 
@@ -1390,7 +1446,10 @@ class PygView(object):
         lines.append("------------ You killed: ------------")
         for v in self.player.killdict:
             lines.append("{} {}".format(self.player.killdict[v], v))
-        display_textlines(lines, self.screen,  (255, 255, 255), PygView.GAMEOVER)
+        if self.player.hunger > 99:
+           display_textlines(lines, self.screen,  (255, 255, 255), PygView.GAMEOVEREAT)
+        else:
+           display_textlines(lines, self.screen,  (255, 255, 255), PygView.GAMEOVER)
         # ------------ game over -----------------
         pygame.mixer.music.stop()
         for line in lines:
