@@ -139,9 +139,11 @@ def combat_round(attacker, defender, level):
         stats = {"sword": (2, 5, 0.1,  0.01),
                  "knife": (2, 3, 0.05, 0.01),
                  "fangs": (1, 3, 0.15, 0.00),
-                 "fist":  (1, 2, 0.01, 0.00)}
+                 "fist":  (1, 2, 0.01, 0.00),
+                 "schwert der unzerstörbarkeit": (5, 10, 0.5, 0.001)
+                }
         # order weapons here from best to worst. fist must be last item in list
-        for weapon in ["sword", "knife", "fangs", "fist"]:
+        for weapon in ["sword", "knife", "fangs", "fist", "schwert der unzerstörbarkeit"]:
             if weapon in attacker.inventory:
                 damage = random.randint(stats[weapon][0], stats[weapon][1])
                 #if weapon == "fangs":
@@ -499,6 +501,9 @@ class Player(Monster):
     def ai(self, player=None):
         return 0, 0  # overwriting ai from Monster calss. Player get his own AI code from mainloop
 
+        #if check_levelup(self) == +1
+
+
     def show_inventory(self):
         """show inventory, return lines of text"""
         lines = ["you carry this stuff with you:"]
@@ -603,6 +608,11 @@ class Fruit(Item):
          self.picture = PygView.APPLE
          #self.hitpoints = 1
          
+class Lichtzaubertrank(Item):
+    def __init__(self, x, y):
+        Item.__init__(self, x, y)
+        self.picture = PygView.SICHTZAUBERTRANK
+         
 
 class Key(Item):
     def __init__(self, x, y, color="dull"):
@@ -662,7 +672,9 @@ class Level(object):
         "L": "loot",
         "a": "Apple",
         "k": "key",
-        "E": "Elfe"
+        "E": "Elfe",
+        "l": "Lichtzaubertrank"
+            
     }
 
     @staticmethod
@@ -770,8 +782,8 @@ class Level(object):
                 if char == "M":
                     self.monsters.append(random.choice([Goblin(x, y),
                                                         Wolf(x, y),
-													    Elfe(x, y)]		
-													    ))  # insert your own Monsters here
+                                                        Elfe(x, y)]     
+                                                        ))  # insert your own Monsters here
                 elif char == "B":
                     # insert your own boss monsters here
                     self.monsters.append(random.choice([EliteWarrior(x, y), Golem(x, y)]))
@@ -783,6 +795,8 @@ class Level(object):
                     self.doors.append(Door(x, y))       # object on top of Floor()
                 elif char == "a":
                     self.fruits.append(Fruit(x,y))     # object on top of Floor()
+                elif char == "l":
+                    self.fruits.append(Lichtzaubertrank(x,y))
                 elif char == "L":
                     self.loot.append(Loot(x, y))        # object on top of Floor()
                 elif char == "k":
@@ -890,6 +904,7 @@ class PygView(object):
         pygame.init()
         self.clock = pygame.time.Clock()
         # ----------- pictureschirm einrichten --------
+        PygView.sichtradius = 5 # normal
         PygView.width = width   #
         PygView.height = height
         # self.screenrect = pygame.Rect(0, 0, self.width, self.height)
@@ -931,13 +946,19 @@ class PygView(object):
         PygView.LOOT = PygView.MAIN.image_at((155, 672, 32, 32), (0, 0, 0))
         PygView.KEY = PygView.FIGUREN.image_at((54, 1682, 32, 32), (0, 0, 0))
         PygView.SIGN = PygView.GUI.image_at((197, 0, 32, 32), (0, 0, 0))
-        PygView.ELFE = pygame.image.load(os.path.join("images", "elfe.png")) 
+        
         # ------- portraits -----
         PygView.TRADER = pygame.image.load(os.path.join("images", "hakim.png"))
         PygView.DRUID = pygame.image.load(os.path.join("images", "druid.png"))
         PygView.GAMEOVER = pygame.image.load(os.path.join("images", "gameover.jpg"))
         PygView.GAMEOVEREAT = pygame.image.load(os.path.join("images", "gameover.png"))
-        
+        PygView.ELFE = pygame.image.load(os.path.join("images", "elfe.png")) 
+        PygView.SCHWERTDERUNZERSTÖRBARKEIT  = pygame.image.load(os.path.join("images", "schwert der unzerstoerbarkeit.png"))
+        PygView.SICHTNORMAL = pygame.image.load(os.path.join("images", "kreis180.png")) 
+        PygView.SICHTBLIND = pygame.image.load(os.path.join("images", "blindheit.png")) 
+        PygView.SICHTZAUBER = pygame.image.load(os.path.join("images", "lichtzauber.png")) 
+        PygView.SICHTZAUBERTRANK = pygame.image.load(os.path.join("images", "lichtzaubertrank.png"))
+        PygView.ICHKANNSEHEN = pygame.image.load(os.path.join("images", "ichkannsehen.png")) 
         # --------- create player instance --------------
         self.player = Player(x, y, xp, level, hp)
         # ---- ask player to enter his name --------
@@ -1039,6 +1060,14 @@ class PygView(object):
         PygView.scrolly = (self.height - self.gui_height) / 2 - self.player.y * 32
         self.screen.fill((0, 0, 0))  # make all black
         self.screen.blit(self.background, (PygView.scrollx, PygView.scrolly))
+        if  PygView.sichtradius == 5:
+            self.screen.blit(PygView.SICHTNORMAL,  (-50,-40))
+        elif PygView.sichtradius == 10: 
+             self.screen.blit(PygView.SICHTZAUBER, (-50, -40))
+            
+            #if PygView.lichtzaubertrank in                      
+
+
 
         # ---- paint monsters ---
         for monster in self.level.monsters:
@@ -1342,15 +1371,27 @@ class PygView(object):
                     # --------- is there a fruit (apple) ? if yes, relase the apple-ghost -------
                     for fruit in self.level.fruits:
                         if fruit.x == self.player.x and fruit.y == self.player.y:
-                            #key.carried = True
-                            #self.player.keys.append(key)
-                            fruit.hitpoints = 0
-                            self.status.append("{} you crunch an apple ".format(self.turns))
-                            Flytext(self.player.x, self.player.y, "magic apple", (0, 200, 128))
-                            lines = ["i am the apple-ghost",
-                                     "thanks for releasing me",
-                                     ]
-                            display_textlines(lines, self.screen, (0, 255, 255), PygView.DRUID)
+                           fruit.hitpoints = 0
+                           if type(fruit).__name__ == "Apple":
+                                
+                                #key.carried = True
+                                #self.player.keys.append(key)
+                            
+                               self.status.append("{} you crunch an apple ".format(self.turns))
+                               Flytext(self.player.x, self.player.y, "magic apple", (0, 200, 128))
+                               lines = ["i am the apple-ghost",
+                                         "thanks for releasing me"
+                                         ]
+                               display_textlines(lines, self.screen, (0, 255, 255), PygView.DRUID)
+                           elif type(fruit).__name__ == "Lichtzaubertrank":
+
+                                 
+                               #self.status.append("{}  ".format(self.turns))
+                               Flytext(self.player.x, self.player.y, "Light!", (0, 200, 128))
+                               lines = ["Now I can see!"]
+                               PygView.sichtradius = 10
+                                                     
+                               display_textlines(lines, self.screen, (0, 255, 255), PygView.ICHKANNSEHEN)       
                     # --------- is there a trap ? --------------
                     # ---- detect traps around player
                     dirs = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
